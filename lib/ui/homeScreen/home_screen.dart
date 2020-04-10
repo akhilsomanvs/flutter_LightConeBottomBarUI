@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:lightanimatedtabbar/ui/homeScreen/bottom_bar_child_model.dart';
 
@@ -8,6 +10,8 @@ class HomeScreen extends StatelessWidget {
     bottomBarModel.addChild(iconData: Icons.home, onTap: () {});
     bottomBarModel.addChild(iconData: Icons.search, onTap: () {});
     bottomBarModel.addChild(iconData: Icons.fiber_new, onTap: () {});
+    bottomBarModel.addChild(iconData: Icons.add_a_photo, onTap: () {});
+    bottomBarModel.addChild(iconData: Icons.shopping_cart, onTap: () {});
 
     return SafeArea(
       child: Container(
@@ -29,30 +33,55 @@ class HomeScreen extends StatelessWidget {
 }
 
 class BottomLightNavBar extends StatefulWidget {
-  int itemCount;
   final BottomBarChildModel bottomBarModel;
 
-  BottomLightNavBar({@required this.bottomBarModel}) {
-    this.itemCount = bottomBarModel.children.length;
-  }
+  BottomLightNavBar({@required this.bottomBarModel});
 
   @override
   _BottomLightNavBarState createState() => _BottomLightNavBarState();
 }
 
-class _BottomLightNavBarState extends State<BottomLightNavBar> {
+class _BottomLightNavBarState extends State<BottomLightNavBar> with SingleTickerProviderStateMixin {
+  AnimationController animController;
+
   @override
-  Widget build(BuildContext context) {
+  void initState() {
+    super.initState();
+    animController = AnimationController(vsync: this, duration: Duration(milliseconds: 250))
+      ..addListener(() {
+        int previousSelectedIndex = widget.bottomBarModel.previousSelectedIndex;
+        int destIndex = widget.bottomBarModel.currentSelectedIndex;
+
+        setState(() {
+          if (animController.status != AnimationStatus.dismissed) {
+            widget.bottomBarModel.shouldShowLightCone = false;
+            widget.bottomBarModel.changingValue = lerpDouble(previousSelectedIndex, destIndex, animController.value);
+          }
+        });
+      })
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          animController.reset();
+          widget.bottomBarModel.shouldShowLightCone = true;
+        }
+      });
 
     widget.bottomBarModel.children.forEach((item) {
-      item.onTap = (){
+      item.onTap = () {
         item.onClick();
-        setState(() {
-
-        });
+        animController.forward();
       };
     });
+  }
 
+  @override
+  void dispose() {
+    animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       height: 60,
       color: Colors.black54,
@@ -77,8 +106,9 @@ class ScrollIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return CustomPaint(
       foregroundPainter: ScrollIndicatorPainter(
+        shouldShowLightCone: bottomBarChildModel.shouldShowLightCone,
         itemCount: itemCount,
-        selectedItemIndex: bottomBarChildModel.currentSelectedIndex,
+        selectedItemIndex: bottomBarChildModel.changingValue,
       ),
       child: Container(
         child: Row(
@@ -86,7 +116,10 @@ class ScrollIndicator extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: bottomBarChildModel.children.map((childItem) {
             return GestureDetector(
-              child: Icon(childItem.iconData,color: childItem.isSelected?Colors.white:Colors.black38,),
+              child: Icon(
+                childItem.iconData,
+                color: childItem.isSelected ? Colors.white : Colors.black38,
+              ),
               onTap: () {
                 childItem.onTap();
               },
@@ -100,13 +133,14 @@ class ScrollIndicator extends StatelessWidget {
 
 class ScrollIndicatorPainter extends CustomPainter {
   final int itemCount;
-  final int selectedItemIndex;
+  final double selectedItemIndex;
 
   final Paint trackPaint;
   final Paint thumbPaint;
   final double thumbPositionPercent;
 
   final double topLightHeight = 4;
+  final bool shouldShowLightCone;
   final Gradient lightGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -120,10 +154,10 @@ class ScrollIndicatorPainter extends CustomPainter {
     ],
   );
 
-  ScrollIndicatorPainter({this.itemCount, this.selectedItemIndex})
+  ScrollIndicatorPainter({this.shouldShowLightCone, this.itemCount, this.selectedItemIndex})
       : trackPaint = Paint()
-    ..color = Colors.black
-    ..style = PaintingStyle.fill,
+          ..color = Colors.black
+          ..style = PaintingStyle.fill,
         thumbPaint = Paint()
           ..color = Colors.white
           ..style = PaintingStyle.fill,
@@ -171,12 +205,14 @@ class ScrollIndicatorPainter extends CustomPainter {
         thumbPaint);
 
     //Draw Light cone
-    final drawRect = Rect.fromLTWH(thumbChamberStartPoint, 0.0, thumbChamberWidth, size.height);
-    thumbPaint.shader = lightGradient.createShader(drawRect);
-    canvas.drawPath(
-      returnTrapezoidPath(rect: drawRect, topWidth: thumbWidth.toInt(), bottomWidth: thumbChamberHalfWidth.toInt()),
-      thumbPaint,
-    );
+    if (shouldShowLightCone) {
+      final drawRect = Rect.fromLTWH(thumbChamberStartPoint, 0.0, thumbChamberWidth, size.height);
+      thumbPaint.shader = lightGradient.createShader(drawRect);
+      canvas.drawPath(
+        returnTrapezoidPath(rect: drawRect, topWidth: thumbWidth.toInt(), bottomWidth: thumbChamberWidth.toInt()),
+        thumbPaint,
+      );
+    }
   }
 
   @override
@@ -189,7 +225,9 @@ class ScrollIndicatorPainter extends CustomPainter {
     final bottomStartPoint = Offset(rect.bottomCenter.dx - (bottomWidth / 2), rect.bottomCenter.dy);
     return Path()
       ..moveTo(topStartPoint.dx, topStartPoint.dy)
-      ..lineTo(topStartPoint.dx + topWidth, topStartPoint.dy)..lineTo(bottomStartPoint.dx + bottomWidth, bottomStartPoint.dy)..lineTo(bottomStartPoint.dx, bottomStartPoint.dy)
+      ..lineTo(topStartPoint.dx + topWidth, topStartPoint.dy)
+      ..lineTo(bottomStartPoint.dx + bottomWidth, bottomStartPoint.dy)
+      ..lineTo(bottomStartPoint.dx, bottomStartPoint.dy)
       ..close();
   }
 }
