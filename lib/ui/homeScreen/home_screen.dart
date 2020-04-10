@@ -94,6 +94,7 @@ class _BottomLightNavBarState extends State<BottomLightNavBar> with SingleTicker
           shouldShowLightCone: widget.bottomBarModel.shouldShowLightCone,
           itemCount: widget.bottomBarModel.children.length,
           selectedItemIndex: widget.bottomBarModel.changingValue,
+          shouldShowTrack: false,
         ),
         child: Container(
           child: Row(
@@ -131,6 +132,7 @@ class BottomBarLightConePainter extends CustomPainter {
 
   final double topLightHeight = 4;
   final bool shouldShowLightCone;
+  bool shouldShowTrack = true;
   Gradient lightGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -144,9 +146,9 @@ class BottomBarLightConePainter extends CustomPainter {
     ],
   );
 
-  BottomBarLightConePainter({@required this.shouldShowLightCone, @required this.itemCount, @required this.selectedItemIndex, Gradient lightConeGradient})
+  BottomBarLightConePainter({@required this.shouldShowLightCone, @required this.itemCount, @required this.selectedItemIndex, this.shouldShowTrack = true, Gradient lightConeGradient})
       : trackPaint = Paint()
-          ..color = Colors.black
+          ..color = Colors.black38
           ..style = PaintingStyle.fill,
         thumbPaint = Paint()
           ..color = Colors.white
@@ -160,20 +162,22 @@ class BottomBarLightConePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     //Draw track
-    canvas.drawRRect(
-        RRect.fromRectAndCorners(
-          Rect.fromLTWH(
-            0.0,
-            0.0,
-            size.width,
-            topLightHeight,
+    if (shouldShowTrack) {
+      canvas.drawRRect(
+          RRect.fromRectAndCorners(
+            Rect.fromLTWH(
+              0.0,
+              0.0,
+              size.width,
+              topLightHeight,
+            ),
+            topLeft: Radius.circular(3.0),
+            topRight: Radius.circular(3.0),
+            bottomLeft: Radius.circular(3.0),
+            bottomRight: Radius.circular(3.0),
           ),
-          topLeft: Radius.circular(3.0),
-          topRight: Radius.circular(3.0),
-          bottomLeft: Radius.circular(3.0),
-          bottomRight: Radius.circular(3.0),
-        ),
-        trackPaint);
+          trackPaint);
+    }
 
     //Draw Thumb
     final thumbChamberWidth = size.width / itemCount;
@@ -200,7 +204,7 @@ class BottomBarLightConePainter extends CustomPainter {
 
     //Draw Light cone
     if (shouldShowLightCone) {
-      final lightConeRect = Rect.fromLTWH(thumbChamberStartPoint, 0.0, thumbChamberWidth, size.height);
+      final lightConeRect = Rect.fromLTWH(thumbChamberStartPoint, topLightHeight, thumbChamberWidth, size.height);
       thumbPaint.shader = lightGradient.createShader(lightConeRect);
       canvas.drawPath(
         returnTrapezoidPath(rect: lightConeRect, topWidth: thumbWidth.toInt(), bottomWidth: thumbChamberWidth.toInt()),
