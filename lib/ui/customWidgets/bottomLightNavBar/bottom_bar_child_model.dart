@@ -14,10 +14,12 @@ class BottomBarChildModel {
     changingValue = currentSelectedIndex.toDouble();
   }
 
-  void addChild({IconData iconData, Function onTap}) {
+  /// Creates and Adds a Child item to the BottomLightNavBar
+  void addChild({IconData iconData, Function(int) onTap}) {
     children.add(_BottomBarChild(parent: this, index: children.length, iconData: iconData, onTap: onTap));
   }
 
+  /// Selects the child item at [index]. Throws Exception if [index] is invalid.
   void selectChildAtIndex(int index) {
     if (index >= 0 && index < children.length) {
       changingValue = index.toDouble();
@@ -55,17 +57,17 @@ class _BottomBarChild {
   bool isSelected = false;
   int index;
 
-  _BottomBarChild({@required BottomBarChildModel parent, @required this.index, @required this.iconData, Function onTap}) {
+  _BottomBarChild({@required BottomBarChildModel parent, @required this.index, @required this.iconData, Function(int) onTap}) {
+
     isSelected = index == parent.currentSelectedIndex;
-    if (onTap == null) {
-      onTap = () {};
-    }
 
     this.onClick = () {
       //set this child as selected
       parent.setChildAsSelected(this);
       //Execute the passed in method
-      onTap();
+      if(onTap!=null) {
+        onTap(this.index);
+      }
     };
   }
 }
