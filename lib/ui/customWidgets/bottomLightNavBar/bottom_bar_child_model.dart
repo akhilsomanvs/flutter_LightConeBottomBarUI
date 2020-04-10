@@ -15,7 +15,7 @@ class BottomBarChildModel {
   }
 
   /// Creates and Adds a Child item to the BottomLightNavBar
-  void addChild({IconData iconData, Function(int) onTap}) {
+  void addChild({@required IconData iconData, Function(int) onTap}) {
     children.add(_BottomBarChild(parent: this, index: children.length, iconData: iconData, onTap: onTap));
   }
 
