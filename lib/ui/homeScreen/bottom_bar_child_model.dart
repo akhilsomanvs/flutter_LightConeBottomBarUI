@@ -4,7 +4,7 @@ class BottomBarChildModel {
   List<_BottomBarChild> children = [];
   int defaultSelectedIndex = 0;
   int previousSelectedIndex = 0;
-  int currentSelectedIndex = 1;
+  int currentSelectedIndex = 0;
 
   double changingValue = 0.0;
 
@@ -18,10 +18,21 @@ class BottomBarChildModel {
     children.add(_BottomBarChild(parent: this, index: children.length, iconData: iconData, onTap: onTap));
   }
 
+  void selectChildAtIndex(int index) {
+    if (index >= 0 && index < children.length) {
+      changingValue = index.toDouble();
+      final childAtIndex = children[index];
+      setChildAsSelected(childAtIndex);
+    } else {
+      throw Exception("Invalid Index");
+    }
+  }
+
   void clearAllChildren() {
     children.clear();
   }
 
+  /// Set [child] as the currently selected
   void setChildAsSelected(_BottomBarChild child) {
     int index = children.indexOf(child);
     int currentSelectedChildIndex = children.indexWhere((item) {
@@ -40,7 +51,6 @@ class BottomBarChildModel {
 
 class _BottomBarChild {
   IconData iconData;
-  Function onTap;
   Function onClick;
   bool isSelected = false;
   int index;

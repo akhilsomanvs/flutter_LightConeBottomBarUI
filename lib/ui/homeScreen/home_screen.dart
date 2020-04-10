@@ -6,12 +6,16 @@ import 'package:lightanimatedtabbar/ui/homeScreen/bottom_bar_child_model.dart';
 class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    /**
+     * Add item and Click events for Bottom Bar
+     * */
     final bottomBarModel = BottomBarChildModel();
     bottomBarModel.addChild(iconData: Icons.home, onTap: () {});
     bottomBarModel.addChild(iconData: Icons.search, onTap: () {});
     bottomBarModel.addChild(iconData: Icons.fiber_new, onTap: () {});
     bottomBarModel.addChild(iconData: Icons.add_a_photo, onTap: () {});
     bottomBarModel.addChild(iconData: Icons.shopping_cart, onTap: () {});
+    bottomBarModel.selectChildAtIndex(2);
 
     return SafeArea(
       child: Container(
@@ -47,6 +51,9 @@ class _BottomLightNavBarState extends State<BottomLightNavBar> with SingleTicker
   @override
   void initState() {
     super.initState();
+    /**
+     * Animation
+     * */
     animController = AnimationController(vsync: this, duration: Duration(milliseconds: 250))
       ..addListener(() {
         int previousSelectedIndex = widget.bottomBarModel.previousSelectedIndex;
@@ -65,13 +72,6 @@ class _BottomLightNavBarState extends State<BottomLightNavBar> with SingleTicker
           widget.bottomBarModel.shouldShowLightCone = true;
         }
       });
-
-    widget.bottomBarModel.children.forEach((item) {
-      item.onTap = () {
-        item.onClick();
-        animController.forward();
-      };
-    });
   }
 
   @override
@@ -85,53 +85,43 @@ class _BottomLightNavBarState extends State<BottomLightNavBar> with SingleTicker
     return Container(
       height: 60,
       color: Colors.black54,
-      child: ScrollIndicator(
-        bottomBarChildModel: widget.bottomBarModel,
-      ),
-    );
-  }
-}
-
-class ScrollIndicator extends StatelessWidget {
-  int itemCount = 0;
-  final int selectedItemIndex;
-
-  final BottomBarChildModel bottomBarChildModel;
-
-  ScrollIndicator({@required this.bottomBarChildModel, this.selectedItemIndex = 0}) {
-    this.itemCount = bottomBarChildModel.children.length;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      foregroundPainter: ScrollIndicatorPainter(
-        shouldShowLightCone: bottomBarChildModel.shouldShowLightCone,
-        itemCount: itemCount,
-        selectedItemIndex: bottomBarChildModel.changingValue,
-      ),
-      child: Container(
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: bottomBarChildModel.children.map((childItem) {
-            return GestureDetector(
-              child: Icon(
-                childItem.iconData,
-                color: childItem.isSelected ? Colors.white : Colors.black38,
-              ),
-              onTap: () {
-                childItem.onTap();
-              },
-            );
-          }).toList(),
+      child: CustomPaint(
+        /**
+         * Since the custom painting has to be done over the child widget,
+         * we use "foregroundPainter" instead of just "painter"
+         * */
+        foregroundPainter: BottomBarLightConePainter(
+          shouldShowLightCone: widget.bottomBarModel.shouldShowLightCone,
+          itemCount: widget.bottomBarModel.children.length,
+          selectedItemIndex: widget.bottomBarModel.changingValue,
+        ),
+        child: Container(
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: widget.bottomBarModel.children.map((childItem) {
+              return GestureDetector(
+                child: Icon(
+                  childItem.iconData,
+                  /**
+                   * Only activate the icon when selected and the light cone is shown as well.
+                   * */
+                  color: childItem.isSelected && widget.bottomBarModel.shouldShowLightCone ? Colors.white : Colors.black38,
+                ),
+                onTap: () {
+                  childItem.onClick();
+                  animController.forward();
+                },
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
   }
 }
 
-class ScrollIndicatorPainter extends CustomPainter {
+class BottomBarLightConePainter extends CustomPainter {
   final int itemCount;
   final double selectedItemIndex;
 
@@ -141,7 +131,7 @@ class ScrollIndicatorPainter extends CustomPainter {
 
   final double topLightHeight = 4;
   final bool shouldShowLightCone;
-  final Gradient lightGradient = LinearGradient(
+  Gradient lightGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: [
@@ -154,14 +144,18 @@ class ScrollIndicatorPainter extends CustomPainter {
     ],
   );
 
-  ScrollIndicatorPainter({this.shouldShowLightCone, this.itemCount, this.selectedItemIndex})
+  BottomBarLightConePainter({@required this.shouldShowLightCone, @required this.itemCount, @required this.selectedItemIndex, Gradient lightConeGradient})
       : trackPaint = Paint()
           ..color = Colors.black
           ..style = PaintingStyle.fill,
         thumbPaint = Paint()
           ..color = Colors.white
           ..style = PaintingStyle.fill,
-        thumbPositionPercent = selectedItemIndex / itemCount.toDouble();
+        thumbPositionPercent = selectedItemIndex / itemCount.toDouble() {
+    if (lightConeGradient != null) {
+      this.lightGradient = lightConeGradient;
+    }
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -206,10 +200,10 @@ class ScrollIndicatorPainter extends CustomPainter {
 
     //Draw Light cone
     if (shouldShowLightCone) {
-      final drawRect = Rect.fromLTWH(thumbChamberStartPoint, 0.0, thumbChamberWidth, size.height);
-      thumbPaint.shader = lightGradient.createShader(drawRect);
+      final lightConeRect = Rect.fromLTWH(thumbChamberStartPoint, 0.0, thumbChamberWidth, size.height);
+      thumbPaint.shader = lightGradient.createShader(lightConeRect);
       canvas.drawPath(
-        returnTrapezoidPath(rect: drawRect, topWidth: thumbWidth.toInt(), bottomWidth: thumbChamberWidth.toInt()),
+        returnTrapezoidPath(rect: lightConeRect, topWidth: thumbWidth.toInt(), bottomWidth: thumbChamberWidth.toInt()),
         thumbPaint,
       );
     }
@@ -220,6 +214,8 @@ class ScrollIndicatorPainter extends CustomPainter {
     return true;
   }
 
+  /// Returns a trapezoidal path for the [rect] given,
+  /// with the [topWidth] as the length of the top side and [bottomWidth] as the length of the bottom side.
   Path returnTrapezoidPath({@required Rect rect, @required int topWidth, @required int bottomWidth}) {
     final topStartPoint = Offset(rect.topCenter.dx - (topWidth / 2), rect.topCenter.dy);
     final bottomStartPoint = Offset(rect.bottomCenter.dx - (bottomWidth / 2), rect.bottomCenter.dy);
